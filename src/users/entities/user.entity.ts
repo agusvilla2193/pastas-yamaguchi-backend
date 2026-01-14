@@ -2,7 +2,6 @@ import { Cart } from 'src/cart/entities/cart.entity';
 import { Order } from 'src/orders/entities/order.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne } from 'typeorm';
 
-
 @Entity()
 export class User {
     @PrimaryGeneratedColumn()
