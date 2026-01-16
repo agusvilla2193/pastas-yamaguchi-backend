@@ -12,11 +12,14 @@ export class Product {
     @Column()
     description: string;
 
-    @Column()
+    @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
     price: number;
 
     @Column({ default: 100, type: 'int' })
     stock: number;
+
+    @Column({ nullable: true })
+    image: string;
 
     @OneToMany(() => CartItem, item => item.product)
     cartItems: CartItem[];
