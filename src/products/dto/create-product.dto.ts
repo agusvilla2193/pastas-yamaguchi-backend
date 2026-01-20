@@ -9,6 +9,10 @@ export class CreateProductDto {
     @IsString()
     readonly description: string;
 
+    @IsString()
+    @IsNotEmpty()
+    category: string;
+
     @IsNotEmpty()
     @IsNumber()
     @Min(0)

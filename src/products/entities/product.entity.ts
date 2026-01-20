@@ -18,6 +18,9 @@ export class Product {
     @Column({ default: 100, type: 'int' })
     stock: number;
 
+    @Column({ default: 'Simples' })
+    category: string;
+
     @Column({ nullable: true })
     image: string;
 
