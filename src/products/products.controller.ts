@@ -5,37 +5,42 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+// Importa Public si lo tenés definido, o simplemente movemos los Guards
 
 @Controller('products')
-@UseGuards(JwtAuthGuard, RolesGuard) // Protege TODAS las rutas con JWT y Roles
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) { }
 
   @Post()
-  @Roles('admin') // SOLO ADMINS
+  @UseGuards(JwtAuthGuard, RolesGuard) // Protege solo esta ruta
+  @Roles('admin')
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
   }
 
-  @Get() // Cualquier usuario logueado puede ver la lista
+  @Get()
+  // RUTA PÚBLICA: No tiene @UseGuards
   findAll() {
     return this.productsService.findAll();
   }
 
-  @Get(':id') // Cualquier usuario logueado puede ver el detalle
+  @Get(':id')
+  // RUTA PÚBLICA: Para que puedan ver el detalle de una pasta
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(+id);
   }
 
   @Patch(':id')
-  @Roles('admin') // SOLO ADMINS
+  @UseGuards(JwtAuthGuard, RolesGuard) // Protege solo esta ruta
+  @Roles('admin')
   update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
     return this.productsService.update(+id, updateProductDto);
   }
 
   @Delete(':id')
-  @Roles('admin') // SOLO ADMINS
+  @UseGuards(JwtAuthGuard, RolesGuard) // Protege solo esta ruta
+  @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string) {
     return this.productsService.remove(+id);
