@@ -19,10 +19,10 @@ export class User {
     @Column()
     lastName: string;
 
-    @Column({ default: 'user' }) // Puedes usar 'admin', 'user', etc.
+    @Column({ default: 'user' }) // Puedo usar 'admin', 'user', etc.
     role: string;
 
-    @OneToMany(() => Order, order => order.user)
+    @OneToMany(() => Order, (order) => order.user)
     orders: Order[];
 
     @OneToOne(() => Cart, cart => cart.user)
