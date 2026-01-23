@@ -13,32 +13,18 @@ export class AuthService {
     ) { }
 
     async register(userObject: CreateUserDto) {
-        // 1. Verificamos si el usuario ya existe
-        const existingUser = await this.usersService.findOneByEmail(userObject.email);
-        if (existingUser) {
-            // Si el email ya está en uso, lanzamos una excepción 409 Conflict
-            throw new ConflictException('El correo electrónico ya está registrado');
-        }
+        // 1. IMPORTANTE: Simplemente llamamos al service. 
+        // El UsersService ya verifica si existe y ya hashea la clave.
+        const newUser = await this.usersService.create(userObject);
 
-        // 2. Creamos el hash de la contraseña (¡SEGURIDAD!)
-        const hashedPassword = await bcrypt.hash(userObject.password, 10);
-
-        // 3. Delegamos la creación al UsersService
-        const newUser = await this.usersService.create({
-            email: userObject.email,
-            password: hashedPassword,
-            firstName: userObject.firstName,
-            lastName: userObject.lastName,
-
-        });
-
-        // 4. Generamos el token de login inmediatamente (opcional)
+        // 2. Genero el payload para el token con el usuario recién creado
         const payload = {
             email: newUser.email,
             sub: newUser.id,
             role: newUser.role
         };
 
+        // 3. Devuelvo la estructura que el Frontend espera
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -48,7 +34,6 @@ export class AuthService {
                 lastName: newUser.lastName,
                 role: newUser.role,
             }
-            // No devolvemos la contraseña ni el hash
         };
     }
 
@@ -56,12 +41,9 @@ export class AuthService {
         const user = await this.usersService.findOneByEmail(email);
 
         if (user && (await bcrypt.compare(pass, user.password))) {
-            // Si el email existe y la contraseña es correcta
-            // Devolvemos el usuario sin la contraseña (¡seguridad!)
             const { password, ...result } = user;
             return result;
         }
-        // Si la contraseña o el email no coinciden
         return null;
     }
 
@@ -72,7 +54,6 @@ export class AuthService {
             throw new UnauthorizedException('Credenciales incorrectas');
         }
 
-        // El "payload" es la información que guardamos dentro del token
         const payload = {
             email: user.email,
             sub: user.id,
@@ -80,7 +61,6 @@ export class AuthService {
         };
 
         return {
-            // Devolvemos el token que el frontend usará para hacer peticiones protegidas
             access_token: this.jwtService.sign(payload),
             user: {
                 id: user.id,
