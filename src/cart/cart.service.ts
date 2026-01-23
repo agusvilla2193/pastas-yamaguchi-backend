@@ -43,12 +43,11 @@ export class CartService {
     // METODO 2: clearCart (Llamado en OrdersService)
     async clearCart(userId: number): Promise<void> {
         const cart = await this.findCartByUserId(userId);
-        if (cart && cart.items.length > 0) {
-            // Eliminamos los CartItem que pertenecen al carrito
-            await this.cartItemRepository.remove(cart.items as any); // 'as any' es a veces necesario
-            // Opcional: Recargamos la relación de items para que el objeto 'cart' esté limpio
-            cart.items = [];
-            await this.cartRepository.save(cart);
+
+        if (cart && cart.items && cart.items.length > 0) {
+            // Opción más robusta: Borramos los ítems directamente por su relación con el ID del carrito
+            await this.cartItemRepository.delete({ cart: { id: cart.id } });
+
         }
     }
 
