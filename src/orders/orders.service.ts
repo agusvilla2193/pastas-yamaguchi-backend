@@ -13,7 +13,7 @@ export class OrdersService {
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
     private cartService: CartService,
-    private dataSource: DataSource, // Usamos DataSource para transacciones
+    private dataSource: DataSource,
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
   ) { }
@@ -35,7 +35,6 @@ export class OrdersService {
       let total = 0;
       const orderItems: OrderItem[] = [];
 
-      // 2. VALIDAR STOCK Y CREAR ITEMS DE ORDEN
       for (const cartItem of cart.items) {
         const product = await queryRunner.manager.findOneBy(Product, { id: cartItem.product.id });
 
@@ -43,39 +42,33 @@ export class OrdersService {
           throw new BadRequestException(`Stock insuficiente para el producto: ${cartItem.product.name}`);
         }
 
-        // Crear el OrderItem
         const orderItem = new OrderItem();
         orderItem.product = product;
         orderItem.quantity = cartItem.quantity;
-        orderItem.priceAtPurchase = product.price; // Usar el precio actual
+        orderItem.priceAtPurchase = product.price;
         orderItems.push(orderItem);
 
         total += product.price * cartItem.quantity;
 
-        // 3. ACTUALIZAR STOCK (dentro de la transacción)
         product.stock -= cartItem.quantity;
         await queryRunner.manager.save(Product, product);
       }
 
-      // 4. CREAR LA ORDEN
       const order = new Order();
       order.user = user;
       order.total = total;
       order.status = 'PAID';
       const newOrder = await queryRunner.manager.save(Order, order);
 
-      // 5. ASIGNAR ITEMS A LA ORDEN
       for (const item of orderItems) {
         item.order = newOrder;
       }
       await queryRunner.manager.save(OrderItem, orderItems);
 
-      // 6. VACIAR EL CARRITO
       await this.cartService.clearCart(userId);
 
       await queryRunner.commitTransaction();
 
-      // Devolvemos la orden con sus items
       return this.orderRepository.findOne({
         where: { id: newOrder.id },
         relations: ['items', 'items.product'],
@@ -83,18 +76,14 @@ export class OrdersService {
 
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      // Si falla la transacción por stock u otro error, lanzamos la excepción
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
+      if (error instanceof BadRequestException) throw error;
       throw new BadRequestException('Error al procesar la orden: ' + error.message);
-
     } finally {
       await queryRunner.release();
     }
   }
 
-  // 2. BUSCAR TODAS LAS ORDENES DE UN USUARIO
+  // 2. BUSCAR TODAS LAS ORDENES DE UN USUARIO (CLIENTE)
   findAllUserOrders(userId: number): Promise<Order[]> {
     return this.orderRepository.find({
       where: { user: { id: userId } },
@@ -116,11 +105,23 @@ export class OrdersService {
     return order;
   }
 
+  // 4. BUSCAR TODAS LAS ORDENES (DASHBOARD ADMIN)
   async findAllOrders(): Promise<Order[]> {
     return this.orderRepository.find({
-      // Traemos 'user' para ver quién hizo la compra, e 'items' para el detalle
       relations: ['user', 'items', 'items.product'],
-      order: { orderDate: 'DESC' }, // Los pedidos más recientes primero
+      order: { orderDate: 'DESC' },
     });
+  }
+
+  // 5. ACTUALIZAR ESTADO DE LA ORDEN (NUEVO)
+  async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const order = await this.orderRepository.findOneBy({ id });
+
+    if (!order) {
+      throw new NotFoundException(`No se encontró la orden con ID #${id}`);
+    }
+
+    order.status = status;
+    return this.orderRepository.save(order);
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Param, UseGuards, HttpCode, HttpStatus, Patch, Body } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
@@ -27,5 +27,13 @@ export class OrdersController {
   @Get(':id')
   findOne(@Param('id') id: string, @GetUser('userId') userId: number) {
     return this.ordersService.findOneOrder(+id, userId);
+  }
+
+  @Patch(':id/status') // Usamos PATCH para actualizaciones parciales
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: string
+  ) {
+    return this.ordersService.updateOrderStatus(+id, status);
   }
 }
