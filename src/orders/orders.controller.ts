@@ -8,6 +8,11 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) { }
 
+  @Get('all')
+  findAllAdmin() {
+    return this.ordersService.findAllOrders();
+  }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@GetUser('userId') userId: number) {

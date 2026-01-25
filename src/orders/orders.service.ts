@@ -115,4 +115,12 @@ export class OrdersService {
     }
     return order;
   }
+
+  async findAllOrders(): Promise<Order[]> {
+    return this.orderRepository.find({
+      // Traemos 'user' para ver quién hizo la compra, e 'items' para el detalle
+      relations: ['user', 'items', 'items.product'],
+      order: { orderDate: 'DESC' }, // Los pedidos más recientes primero
+    });
+  }
 }
