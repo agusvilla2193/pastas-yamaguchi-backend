@@ -11,18 +11,18 @@ export class CartController {
 
     @Get()
     // El decorador @GetUser('userId') extrae el ID del usuario del token JWT
-    getCart(@GetUser('userId') userId: number) {
+    getCart(@GetUser('id') userId: number) {
         return this.cartService.findCartByUserId(userId);
     }
 
     @Post('add')
-    addItemToCart(@GetUser('userId') userId: number, @Body() addItemDto: AddItemDto) {
+    addItemToCart(@GetUser('id') userId: number, @Body() addItemDto: AddItemDto) {
         return this.cartService.addItemToCart(userId, addItemDto);
     }
 
     // Endpoint para vaciar el carrito
     @Delete('clear')
-    clearCart(@GetUser('userId') userId: number) {
+    clearCart(@GetUser('id') userId: number) {
         return this.cartService.clearCart(userId);
     }
 }

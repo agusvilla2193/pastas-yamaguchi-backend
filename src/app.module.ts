@@ -7,12 +7,13 @@ import { ProductsModule } from './products/products.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: `.development.env`, // <-- Especifica el archivo a usar
-      isGlobal: true, // <-- Hace que el módulo de configuración sea accesible en toda la aplicación
+      envFilePath: `.development.env`,
+      isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -23,8 +24,8 @@ import { OrdersModule } from './orders/orders.module';
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,
+        autoLoadEntities: true,
+        synchronize: true, // Nota: En producción cámbialo a false
       }),
       inject: [ConfigService],
     }),
@@ -32,6 +33,7 @@ import { OrdersModule } from './orders/orders.module';
     UsersModule,
     AuthModule,
     OrdersModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],

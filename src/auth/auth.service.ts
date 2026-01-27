@@ -4,6 +4,19 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { User } from '../users/entities/user.entity';
+
+// Definimos la interfaz de lo que devuelve el Login/Register para el Frontend
+export interface AuthResponse {
+    access_token: string;
+    user: {
+        id: number;
+        email: string;
+        firstName: string;
+        lastName: string;
+        role: string;
+    };
+}
 
 @Injectable()
 export class AuthService {
@@ -12,19 +25,15 @@ export class AuthService {
         private jwtService: JwtService,
     ) { }
 
-    async register(userObject: CreateUserDto) {
-        // 1. IMPORTANTE: Simplemente llamamos al service. 
-        // El UsersService ya verifica si existe y ya hashea la clave.
+    async register(userObject: CreateUserDto): Promise<AuthResponse> {
         const newUser = await this.usersService.create(userObject);
 
-        // 2. Genero el payload para el token con el usuario recién creado
         const payload = {
             email: newUser.email,
             sub: newUser.id,
             role: newUser.role
         };
 
-        // 3. Devuelvo la estructura que el Frontend espera
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -37,17 +46,19 @@ export class AuthService {
         };
     }
 
-    async validateUser(email: string, pass: string): Promise<any> {
+    // Eliminamos el Promise<any> y usamos el tipo Omit para excluir la password
+    async validateUser(email: string, pass: string): Promise<Omit<User, 'password'> | null> {
         const user = await this.usersService.findOneByEmail(email);
 
         if (user && (await bcrypt.compare(pass, user.password))) {
+            // Extraemos la password para no devolverla nunca
             const { password, ...result } = user;
             return result;
         }
         return null;
     }
 
-    async login(loginDto: LoginDto) {
+    async login(loginDto: LoginDto): Promise<AuthResponse> {
         const user = await this.validateUser(loginDto.email, loginDto.password);
 
         if (!user) {

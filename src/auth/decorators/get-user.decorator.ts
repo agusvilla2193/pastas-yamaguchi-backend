@@ -1,16 +1,16 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { createParamDecorator, ExecutionContext, InternalServerErrorException } from '@nestjs/common';
+import { UserSession } from '../interfaces/user-payload.interface';
 
 export const GetUser = createParamDecorator(
-    (data: string, ctx: ExecutionContext) => {
+    (data: keyof UserSession | undefined, ctx: ExecutionContext) => {
         const request = ctx.switchToHttp().getRequest();
+        const user = request.user as UserSession;
 
-        // Cuando el JwtAuthGuard valida el token, adjunta la información
-        // del usuario (el payload) al objeto 'request.user'.
-        const user = request.user;
+        if (!user) {
+            throw new InternalServerErrorException('User not found in request. Check if JwtAuthGuard is applied.');
+        }
 
-        // 'data' es el argumento que paso al decorador (ej: @GetUser('userId'))
-        // Si paso 'userId', devuelve solo request.user.userId.
-        // Si no paso nada (@GetUser()), devuelve el objeto completo del usuario.
-        return data ? user?.[data] : user;
+        // Ahora TS sabe que 'id', 'email' o 'role' son llaves válidas
+        return data ? user[data] : user;
     },
 );

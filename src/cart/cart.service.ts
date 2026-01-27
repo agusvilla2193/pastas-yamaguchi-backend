@@ -10,72 +10,82 @@ import { AddItemDto } from './dto/add-item.dto';
 export class CartService {
     constructor(
         @InjectRepository(Cart)
-        private cartRepository: Repository<Cart>,
+        private readonly cartRepository: Repository<Cart>,
         @InjectRepository(CartItem)
-        private cartItemRepository: Repository<CartItem>,
+        private readonly cartItemRepository: Repository<CartItem>,
         @InjectRepository(Product)
-        private productRepository: Repository<Product>,
+        private readonly productRepository: Repository<Product>,
     ) { }
 
-    // METODO 1: findCartByUserId (Llamado en OrdersService)
+    /**
+     * Busca el carrito del usuario. Si no existe, lo crea automáticamente.
+     */
     async findCartByUserId(userId: number): Promise<Cart> {
         const cart = await this.cartRepository.findOne({
             where: { user: { id: userId } },
-            relations: ['user', 'items', 'items.product'],
+            relations: ['items', 'items.product'], // No necesitamos 'user' aquí normalmente
         });
 
         if (!cart) {
-            // Opción 1: Lanza un error si el carrito no existe
-            // throw new NotFoundException('Cart not found for user'); 
-
-            // Opción 2 (Mejor para este caso): Crea el carrito si no existe
             return this.createEmptyCart(userId);
         }
         return cart;
     }
 
-    // Método auxiliar para crear un carrito (usado arriba)
+    /**
+     * Crea un nuevo carrito vacío para un usuario.
+     */
     private async createEmptyCart(userId: number): Promise<Cart> {
+        // Usamos el ID del usuario directamente en la relación
         const cart = this.cartRepository.create({ user: { id: userId } });
-        return this.cartRepository.save(cart);
+        const savedCart = await this.cartRepository.save(cart);
+
+        // Devolvemos el carrito con el array de ítems inicializado para evitar errores de undefined
+        return { ...savedCart, items: [] };
     }
 
-    // METODO 2: clearCart (Llamado en OrdersService)
+    /**
+     * Vacía el carrito del usuario eliminando todos sus ítems.
+     */
     async clearCart(userId: number): Promise<void> {
         const cart = await this.findCartByUserId(userId);
 
-        if (cart && cart.items && cart.items.length > 0) {
-            // Opción más robusta: Borramos los ítems directamente por su relación con el ID del carrito
+        if (cart.items && cart.items.length > 0) {
+            // Eliminación masiva de ítems asociados a este carrito
             await this.cartItemRepository.delete({ cart: { id: cart.id } });
-
         }
     }
 
-    // METODO 3: addItemToCart (Usado por CartController)
-    // ESTE TAMBIÉN DEBE EXISTIR PARA QUE EL MÓDULO FUNCIONE
+    /**
+     * Añade un producto al carrito o incrementa su cantidad si ya existe.
+     */
     async addItemToCart(userId: number, addItemDto: AddItemDto): Promise<Cart> {
         const { productId, quantity } = addItemDto;
         const cart = await this.findCartByUserId(userId);
-        const product = await this.productRepository.findOneBy({ id: productId });
 
+        const product = await this.productRepository.findOneBy({ id: productId });
         if (!product) {
-            throw new NotFoundException(`Product with ID ${productId} not found.`);
+            throw new NotFoundException(`Producto con ID ${productId} no encontrado.`);
         }
 
-        let cartItem = cart.items.find(item => item.product.id === productId);
+        // Buscamos si el producto ya está en el carrito
+        const existingItem = cart.items.find(item => item.product.id === productId);
 
-        if (cartItem) {
-            cartItem.quantity += quantity;
-            await this.cartItemRepository.save(cartItem);
+        if (existingItem) {
+            // Actualizamos cantidad
+            existingItem.quantity += quantity;
+            await this.cartItemRepository.save(existingItem);
         } else {
-            cartItem = this.cartItemRepository.create({
+            // Creamos nuevo ítem de carrito
+            const newItem = this.cartItemRepository.create({
                 cart: cart,
                 product: product,
                 quantity: quantity,
             });
-            await this.cartItemRepository.save(cartItem);
+            await this.cartItemRepository.save(newItem);
         }
-        // Devolvemos el carrito actualizado (recargándolo para tener los ítems correctos)
+
+        // Retornamos el carrito actualizado con las relaciones frescas
         return this.findCartByUserId(userId);
     }
 }
