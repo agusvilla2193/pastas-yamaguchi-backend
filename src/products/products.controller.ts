@@ -10,7 +10,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Product } from './entities/product.entity';
 
-@Controller('products')
+@Controller('admin/products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) { }
 
