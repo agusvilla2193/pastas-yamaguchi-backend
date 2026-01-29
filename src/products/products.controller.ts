@@ -10,7 +10,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Product } from './entities/product.entity';
 
-@Controller('admin/products')
+@Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) { }
 
@@ -28,6 +28,8 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   // Usamos ParseIntPipe para transformar el string a number automáticamente
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<Product> {
     return this.productsService.findOne(id);
