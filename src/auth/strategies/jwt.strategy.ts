@@ -1,19 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserSession } from '../interfaces/user-payload.interface';
+import { Request } from 'express';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(
         private configService: ConfigService,
     ) {
-        // Obtenemos el secreto del configService de forma segura
         const secret = configService.get<string>('JWT_SECRET');
 
         super({
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+            // Modificamos la extracción para que busque en las cookies
+            jwtFromRequest: (req: Request) => {
+                let token = null;
+                if (req && req.cookies) {
+                    token = req.cookies['access_token'];
+                }
+                return token;
+            },
             ignoreExpiration: false,
             secretOrKey: secret,
         });
@@ -21,13 +28,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     /**
      * Este método se ejecuta tras validar la firma del token.
-     * El 'payload' es el contenido decodificado del JWT.
      */
     async validate(payload: any): Promise<UserSession> {
-        // Tipamos el retorno para asegurar que el objeto 'request.user'
-        // sea exactamente lo que espera nuestro decorador GetUser.
         return {
-            id: payload.sub, // 'sub' es el estándar de JWT para el ID del sujeto
+            id: payload.sub,
             email: payload.email,
             role: payload.role
         };
