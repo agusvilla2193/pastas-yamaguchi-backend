@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Res, Req, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, Res, Req, UseGuards, Get, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { Response } from 'express';
@@ -7,24 +8,26 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+    constructor(
+        private readonly authService: AuthService,
+        private readonly usersService: UsersService
+    ) { }
 
     @Post('login')
     async login(
         @Body() loginDto: LoginDto,
-        @Res({ passthrough: true }) response: Response // Inyectamos la respuesta
+        @Res({ passthrough: true }) response: Response
     ) {
         const authData = await this.authService.login(loginDto);
 
-        // Seteamos la cookie
         response.cookie('access_token', authData.access_token, {
-            httpOnly: true, // Inaccesible para JS del front
-            secure: false,  // true solo en producción (HTTPS)
+            httpOnly: true,
+            secure: false,
             sameSite: 'lax',
-            maxAge: 1000 * 60 * 60 * 24, // 1 día
+            maxAge: 1000 * 60 * 60 * 24,
         });
 
-        return { user: authData.user }; // Ya no enviamos el token en el body
+        return { user: authData.user };
     }
 
     @Post('register')
@@ -44,10 +47,16 @@ export class AuthController {
         return { user: authData.user };
     }
 
+    //Metodo de confirmacion
+    @Get('confirm')
+    async confirm(@Query('token') token: string) {
+        return await this.usersService.confirmEmail(token);
+    }
+
     @Get('me')
     @UseGuards(JwtAuthGuard)
     getProfile(@Req() req) {
-        return req.user; // El Guard ya puso el usuario en el req
+        return req.user;
     }
 
     @Post('logout')

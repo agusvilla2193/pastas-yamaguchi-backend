@@ -19,12 +19,30 @@ export class User {
     @Column()
     lastName: string;
 
-    @Column({ default: 'user' }) // Puedo usar 'admin', 'user', etc.
+    @Column({ nullable: true })
+    phone: string;
+
+    @Column({ nullable: true })
+    address: string;
+
+    @Column({ nullable: true })
+    city: string;
+
+    @Column({ nullable: true })
+    zipCode: string;
+
+    @Column({ default: 'user' })
     role: string;
 
-    @OneToMany(() => Order, (order) => order.user)
+    @Column({ default: false })
+    isActive: boolean;
+
+    @Column({ nullable: true })
+    confirmationToken: string;
+
+    @OneToMany(() => Order, (order) => order.user, { cascade: true })
     orders: Order[];
 
-    @OneToOne(() => Cart, cart => cart.user)
+    @OneToOne(() => Cart, cart => cart.user, { cascade: true })
     cart: Cart;
 }

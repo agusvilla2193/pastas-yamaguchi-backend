@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty, MinLength } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, MinLength, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
     @IsNotEmpty()
@@ -18,6 +18,19 @@ export class CreateUserDto {
     @IsString()
     readonly lastName: string;
 
-    // El rol se puede manejar de forma opcional o 
-    // se puede setear por defecto 'user' en el servicio.
+    @IsNotEmpty({ message: 'El teléfono es necesario para la entrega.' })
+    @IsString()
+    readonly phone: string;
+
+    @IsNotEmpty({ message: 'La dirección es obligatoria.' })
+    @IsString()
+    readonly address: string;
+
+    @IsNotEmpty({ message: 'La localidad es obligatoria.' })
+    @IsString()
+    readonly city: string;
+
+    @IsOptional()
+    @IsString()
+    readonly zipCode: string;
 }

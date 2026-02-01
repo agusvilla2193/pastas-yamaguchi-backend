@@ -9,7 +9,7 @@ async function bootstrap() {
   app.use(cookieParser()); // 2. Usar middleware de cookies
 
   app.enableCors({
-    origin: 'http://localhost:3001', // Tu frontend
+    origin: 'http://localhost:3001', // Mi frontend
     credentials: true, // 3. ¡Vital! Permite el paso de cookies
   });
 

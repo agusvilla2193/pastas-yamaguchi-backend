@@ -10,17 +10,15 @@ export class Order {
     @CreateDateColumn()
     orderDate: Date;
 
-    @Column({ default: 'PENDING' }) // PENDING, PAID, SHIPPED, DELIVERED, CANCELLED
+    @Column({ default: 'PENDING' })
     status: string;
 
-    @Column('decimal', { precision: 10, scale: 2 }) // Total de la orden
+    @Column('decimal', { precision: 10, scale: 2 })
     total: number;
 
-    // Una orden pertenece a un solo Usuario (relación N:1)
-    @ManyToOne(() => User, user => user.orders)
+    @ManyToOne(() => User, user => user.orders, { onDelete: 'CASCADE' })
     user: User;
 
-    // Una orden tiene múltiples ítems (relación 1:N)
     @OneToMany(() => OrderItem, item => item.order, { cascade: true })
     items: OrderItem[];
 }
