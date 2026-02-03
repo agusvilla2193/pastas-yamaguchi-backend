@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto'; // Para generar el token de confirmación
+import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -82,5 +82,23 @@ export class UsersService {
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
     await this.usersRepository.remove(user);
+  }
+
+  async updateResetToken(id: number, token: string, expires: Date): Promise<void> {
+    await this.usersRepository.update(id, {
+      resetPasswordToken: token,
+      resetPasswordExpires: expires,
+    });
+  }
+
+  async findByResetToken(token: string): Promise<User | null> {
+    return this.usersRepository.findOneBy({ resetPasswordToken: token });
+  }
+
+  async clearResetToken(id: number): Promise<void> {
+    await this.usersRepository.update(id, {
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
   }
 }

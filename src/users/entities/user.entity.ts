@@ -40,6 +40,12 @@ export class User {
     @Column({ nullable: true })
     confirmationToken: string;
 
+    @Column({ nullable: true })
+    resetPasswordToken: string;
+
+    @Column({ type: 'timestamp', nullable: true })
+    resetPasswordExpires: Date;
+
     @OneToMany(() => Order, (order) => order.user, { cascade: true })
     orders: Order[];
 
