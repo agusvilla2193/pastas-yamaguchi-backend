@@ -1,24 +1,34 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import * as cookieParser from 'cookie-parser'; // 1. Importar
+import { ValidationPipe, Logger } from '@nestjs/common';
+import * as cookieParser from 'cookie-parser';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
-  app.use(cookieParser()); // 2. Usar middleware de cookies
+  // Habilita el parseo de cookies enviadas por el navegador
+  app.use(cookieParser());
 
+  // Configuración estricta de CORS para comunicación puerto a puerto
   app.enableCors({
-    origin: 'http://localhost:3001', // Mi frontend
-    credentials: true, // 3. ¡Vital! Permite el paso de cookies
+    origin: 'http://localhost:3001', // URL exacta de tu frontend
+    credentials: true, // Permite el intercambio de cookies de sesión
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+  // Validaciones globales de DTOs
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
-  await app.listen(3000);
+  const port = 3000;
+  await app.listen(port);
+  logger.log(`🚀 Dojo Backend corriendo en: http://localhost:${port}`);
 }
-bootstrap();
+
+void bootstrap();
