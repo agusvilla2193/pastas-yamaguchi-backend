@@ -22,3 +22,24 @@ Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarro
 1. Instalar dependencias:
    ```bash
    npm install
+
+2. Configurar variables de entorno (.env):
+   Crea un archivo .env en la raíz con las siguientes claves:
+
+   DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+
+   JWT_SECRET
+
+   FRONTEND_URL (Ej: http://localhost:3001)
+
+   BACKEND_URL (Ej: http://localhost:3000)
+
+   MP_ACCESS_TOKEN
+
+   CLOUDINARY_URL, MAIL_USER, MAIL_PASS
+
+3. Correr en modo desarrollo:
+   npm run start:dev
+
+4. Compilar para producción:
+   npm run build
