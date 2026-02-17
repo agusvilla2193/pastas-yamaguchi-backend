@@ -39,7 +39,9 @@ Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarro
    CLOUDINARY_URL, MAIL_USER, MAIL_PASS
 
 3. Correr en modo desarrollo:
+   ```bash
    npm run start:dev
 
 4. Compilar para producción:
+     ```bash
    npm run build
