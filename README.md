@@ -24,7 +24,7 @@ Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarro
    npm install
 
 2. Configurar variables de entorno (.env):
-   Crea un archivo .env en la raíz con las siguientes claves:
+   Crea un archivo .development.env en la raíz con las siguientes claves:
 
    DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 
