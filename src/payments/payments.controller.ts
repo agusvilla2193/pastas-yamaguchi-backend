@@ -11,9 +11,6 @@ import {
 import { PaymentsService, CreatePreferenceData, PreferenceResponse } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-/**
- * Interface para el Webhook de Mercado Pago.
- */
 interface MercadoPagoWebhookDto {
     action: string;
     api_version: string;
@@ -33,10 +30,6 @@ export class PaymentsController {
 
     constructor(private readonly paymentsService: PaymentsService) { }
 
-    /**
-     * Crea la preferencia de pago.
-     * PROTEGIDO: Solo usuarios con JWT válido pueden iniciar pagos.
-     */
     @UseGuards(JwtAuthGuard)
     @Post('create-preference')
     @HttpCode(HttpStatus.OK)
@@ -46,35 +39,32 @@ export class PaymentsController {
         this.logger.log(`Iniciando flujo de pago para la orden: ${data.orderId}`);
 
         try {
-            const result = await this.paymentsService.createPreference(data);
-            return result;
+            return await this.paymentsService.createPreference(data);
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.logger.error(`Falla en creación de preferencia: ${errorMessage}`);
-
             throw new InternalServerErrorException('No se pudo establecer conexión con el Dojo de Pagos');
         }
     }
 
-    /**
-     * Maneja las notificaciones de eventos (Webhooks) de Mercado Pago.
-     * NOTA: Este endpoint debe ser PÚBLICO porque Mercado Pago lo llama desde sus servidores.
-     */
     @Post('webhook')
     @HttpCode(HttpStatus.OK)
     async handleWebhook(
         @Body() body: MercadoPagoWebhookDto
     ): Promise<{ received: boolean; success?: boolean }> {
+        // IMPORTANTE: Mercado Pago a veces envía eventos que no son 'payment' (ej. merchant_order)
         this.logger.debug(`Webhook recibido tipo: ${body.type}`);
 
         if (body.type === 'payment') {
-            const paymentId = body.data.id;
+            const paymentId = body.data?.id;
+            if (!paymentId) return { received: true, success: false };
+
             try {
                 const result = await this.paymentsService.handleWebhook(paymentId);
                 return { received: true, success: result.success };
             } catch (error: unknown) {
                 this.logger.error(`Error procesando Webhook de pago ${paymentId}:`, error);
-                // Devuelvo 200 aunque falle internamente para que MP no reintente infinitamente
+                // Respondemos 200 OK para evitar que el servidor de MP se sature reintentando
                 return { received: true, success: false };
             }
         }

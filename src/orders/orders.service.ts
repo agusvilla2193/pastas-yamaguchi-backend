@@ -30,7 +30,6 @@ export class OrdersService {
         throw new BadRequestException('El carrito está vacío.');
       }
 
-      // Tipado fuerte al buscar el usuario
       const user = await queryRunner.manager.findOneBy(User, { id: userId });
       if (!user) throw new NotFoundException('Usuario no encontrado');
 
@@ -52,7 +51,7 @@ export class OrdersService {
 
         total += product.price * cartItem.quantity;
 
-        // Descontamos stock dentro de la transacción
+        // Descontamos stock preventivamente
         product.stock -= cartItem.quantity;
         await queryRunner.manager.save(Product, product);
       }
@@ -60,19 +59,20 @@ export class OrdersService {
       const order = new Order();
       order.user = user;
       order.total = total;
-      order.status = 'PAID';
+      // CAMBIO CRÍTICO: La orden comienza PENDING hasta que el webhook confirme el pago
+      order.status = 'PENDING';
+
       const newOrder = await queryRunner.manager.save(Order, order);
 
-      // Asociamos items a la orden creada
-      orderItems.forEach(item => item.order = newOrder);
+      for (const item of orderItems) {
+        item.order = newOrder;
+      }
       await queryRunner.manager.save(OrderItem, orderItems);
 
-      // Limpiamos carrito
       await this.cartService.clearCart(userId);
 
       await queryRunner.commitTransaction();
 
-      // Devolvemos la orden con sus relaciones cargadas
       const finalOrder = await this.orderRepository.findOne({
         where: { id: newOrder.id },
         relations: ['items', 'items.product'],
@@ -83,12 +83,9 @@ export class OrdersService {
 
     } catch (error: unknown) {
       await queryRunner.rollbackTransaction();
-
-      // Manejo de errores con tipado seguro
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       throw new BadRequestException('Error al procesar la orden: ' + errorMessage);
     } finally {
@@ -123,7 +120,6 @@ export class OrdersService {
     });
   }
 
-  // Usamos un literal de tipo para los estados posibles
   async updateOrderStatus(id: number, status: string): Promise<Order> {
     const order = await this.orderRepository.findOneBy({ id });
 
