@@ -5,6 +5,7 @@ import {
     InternalServerErrorException,
     Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { OrdersService } from '../orders/orders.service';
 
@@ -32,8 +33,9 @@ export class PaymentsService {
     constructor(
         @Inject(forwardRef(() => OrdersService))
         private readonly ordersService: OrdersService,
+        private readonly configService: ConfigService,
     ) {
-        const accessToken = process.env.MP_ACCESS_TOKEN;
+        const accessToken = this.configService.get<string>('MP_ACCESS_TOKEN');
         if (!accessToken) {
             this.logger.error('MP_ACCESS_TOKEN no definido en el entorno');
         }
@@ -42,17 +44,12 @@ export class PaymentsService {
         });
     }
 
-    /**
-     * Crea una preferencia de pago en Mercado Pago y retorna la URL de pago.
-     */
     async createPreference(data: CreatePreferenceData): Promise<PreferenceResponse> {
-        // Limpiamos las URLs para evitar errores de concatenación (doble barra)
-        const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-        const backendUrl = (process.env.BACKEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+        const frontendUrl = (this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001').replace(/\/$/, '');
+        const backendUrl = (this.configService.get<string>('BACKEND_URL') || 'http://localhost:3000').replace(/\/$/, '');
 
         try {
             const preference = new Preference(this.client);
-
             this.logger.log(`[MP] Generando preferencia para Orden #${data.orderId}`);
 
             const result = await preference.create({
@@ -71,7 +68,6 @@ export class PaymentsService {
                     },
                     auto_return: 'approved',
                     external_reference: String(data.orderId),
-                    // IMPORTANTE: notification_url es vital para el Webhook en producción
                     notification_url: `${backendUrl}/payments/webhook`,
                 },
             });
@@ -84,29 +80,24 @@ export class PaymentsService {
         }
     }
 
-    /**
-     * Procesa la notificación (Webhook) enviada por Mercado Pago.
-     */
     async handleWebhook(paymentId: string): Promise<{ success: boolean; error?: string }> {
         try {
             const payment = new Payment(this.client);
-
-            // Obtenemos los detalles del pago desde la API de Mercado Pago
             const paymentDetails = await payment.get({ id: paymentId });
+
+            if (!paymentDetails || !paymentDetails.external_reference) {
+                this.logger.warn(`Webhook recibido para pago ${paymentId} sin referencia externa.`);
+                return { success: true };
+            }
 
             const orderId = paymentDetails.external_reference;
             const status = paymentDetails.status;
 
             this.logger.log(`[Webhook] Pago MP #${paymentId} - Status: ${status} - Orden: ${orderId}`);
 
-            if (status === 'approved' && orderId) {
-                // Aquí es donde la magia ocurre: la orden pasa de PENDING a PAID
+            if (status === 'approved') {
                 await this.ordersService.updateOrderStatus(Number(orderId), 'PAID');
                 this.logger.log(`✅ Orden ${orderId} actualizada a PAID satisfactoriamente.`);
-            } else {
-                this.logger.warn(
-                    `[Webhook] El pago ${paymentId} tiene estado: ${status}. No se actualizó la orden #${orderId}.`
-                );
             }
 
             return { success: true };

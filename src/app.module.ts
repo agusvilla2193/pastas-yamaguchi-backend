@@ -12,7 +12,8 @@ import { CartModule } from './cart/cart.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: `.development.env`,
+      // Si existe NODE_ENV (producción), ignora el archivo local; si no, usa .development.env
+      envFilePath: process.env.NODE_ENV ? undefined : '.development.env',
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
@@ -20,12 +21,13 @@ import { CartModule } from './cart/cart.module';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
+        port: configService.get<number>('DB_PORT', 5432),
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true, // Nota: En producción cámbialo a false
+        // Sincronización automática solo en desarrollo
+        synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),
       inject: [ConfigService],
     }),

@@ -1,23 +1,24 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
-  // Habilita el parseo de cookies enviadas por el navegador
   app.use(cookieParser());
 
-  // Configuración estricta de CORS para comunicación puerto a puerto
+  const frontendUrl = configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+
   app.enableCors({
-    origin: 'http://localhost:3001', // URL exacta de tu frontend
-    credentials: true, // Permite el intercambio de cookies de sesión
+    origin: [frontendUrl, 'http://localhost:3001'],
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });
 
-  // Validaciones globales de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -26,9 +27,9 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  const port = 3000;
+  const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
-  logger.log(`🚀 Dojo Backend corriendo en: http://localhost:${port}`);
+  logger.log(`🚀 Dojo Backend corriendo en puerto: ${port}`);
 }
 
 void bootstrap();
