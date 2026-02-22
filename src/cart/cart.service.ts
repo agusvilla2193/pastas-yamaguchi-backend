@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './entities/cart.entity';
@@ -23,7 +23,7 @@ export class CartService {
     async findCartByUserId(userId: number): Promise<Cart> {
         const cart = await this.cartRepository.findOne({
             where: { user: { id: userId } },
-            relations: ['items', 'items.product'], // No necesitamos 'user' aquí normalmente
+            relations: ['items', 'items.product'],
         });
 
         if (!cart) {
@@ -36,12 +36,11 @@ export class CartService {
      * Crea un nuevo carrito vacío para un usuario.
      */
     private async createEmptyCart(userId: number): Promise<Cart> {
-        // Usamos el ID del usuario directamente en la relación
         const cart = this.cartRepository.create({ user: { id: userId } });
         const savedCart = await this.cartRepository.save(cart);
-
-        // Devolvemos el carrito con el array de ítems inicializado para evitar errores de undefined
-        return { ...savedCart, items: [] };
+        // Inicializamos items como array vacío para consistencia en el frontend
+        savedCart.items = [];
+        return savedCart;
     }
 
     /**
@@ -49,34 +48,46 @@ export class CartService {
      */
     async clearCart(userId: number): Promise<void> {
         const cart = await this.findCartByUserId(userId);
-
         if (cart.items && cart.items.length > 0) {
-            // Eliminación masiva de ítems asociados a este carrito
             await this.cartItemRepository.delete({ cart: { id: cart.id } });
         }
     }
 
     /**
-     * Añade un producto al carrito o incrementa su cantidad si ya existe.
+     * Añade un producto al carrito o incrementa su cantidad.
+     * Incluye validación de stock preventiva.
      */
     async addItemToCart(userId: number, addItemDto: AddItemDto): Promise<Cart> {
         const { productId, quantity } = addItemDto;
-        const cart = await this.findCartByUserId(userId);
 
+        // 1. Validar existencia del producto
         const product = await this.productRepository.findOneBy({ id: productId });
         if (!product) {
             throw new NotFoundException(`Producto con ID ${productId} no encontrado.`);
         }
 
-        // Buscamos si el producto ya está en el carrito
+        // 2. Validar stock (UX: No permitimos añadir más de lo que hay)
+        if (product.stock < quantity) {
+            throw new BadRequestException(`Stock insuficiente. Solo quedan ${product.stock} unidades.`);
+        }
+
+        const cart = await this.findCartByUserId(userId);
+
+        // 3. Buscar si el producto ya está en el carrito
         const existingItem = cart.items.find(item => item.product.id === productId);
 
         if (existingItem) {
-            // Actualizamos cantidad
-            existingItem.quantity += quantity;
+            const newQuantity = existingItem.quantity + quantity;
+
+            // Validar stock total (existente + nuevo)
+            if (product.stock < newQuantity) {
+                throw new BadRequestException(`No puedes añadir esa cantidad. Total en carrito superaría el stock disponible.`);
+            }
+
+            existingItem.quantity = newQuantity;
             await this.cartItemRepository.save(existingItem);
         } else {
-            // Creamos nuevo ítem de carrito
+            // 4. Crear nuevo ítem
             const newItem = this.cartItemRepository.create({
                 cart: cart,
                 product: product,
@@ -85,7 +96,7 @@ export class CartService {
             await this.cartItemRepository.save(newItem);
         }
 
-        // Retornamos el carrito actualizado con las relaciones frescas
+        // Retornamos el carrito actualizado
         return this.findCartByUserId(userId);
     }
 }

@@ -1,8 +1,9 @@
 import {
   Controller, Get, Post, Param, UseGuards,
-  HttpCode, HttpStatus, Patch, Body, ParseIntPipe
+  HttpCode, HttpStatus, Patch, Body, ParseIntPipe, BadRequestException
 } from '@nestjs/common';
-import { OrdersService } from './orders.service';
+// Importamos OrderStatus desde el servicio
+import { OrdersService, OrderStatus } from './orders.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -50,8 +51,16 @@ export class OrdersController {
   @Roles('admin')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: string
+    @Body('status') status: string // Recibimos string desde el Body
   ): Promise<Order> {
-    return this.ordersService.updateOrderStatus(id, status);
+    // Definimos los estados válidos para validar el string entrante
+    const validStatuses: OrderStatus[] = ['PENDING', 'PAID', 'SHIPPED', 'CANCELLED'];
+
+    if (!validStatuses.includes(status as OrderStatus)) {
+      throw new BadRequestException(`Estado no válido. Los estados permitidos son: ${validStatuses.join(', ')}`);
+    }
+
+    // Usamos Type Casting (as OrderStatus) para que TS acepte el envío al servicio
+    return this.ordersService.updateOrderStatus(id, status as OrderStatus);
   }
 }
