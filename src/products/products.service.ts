@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
@@ -9,20 +9,13 @@ import { UpdateProductDto } from './dto/update-product.dto';
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
-    private readonly productsRepository: Repository<Product>, // Añadimos readonly
+    private readonly productsRepository: Repository<Product>,
   ) { }
 
-  /**
-   * Obtiene todos los productos de la base de datos.
-   */
   async findAll(): Promise<Product[]> {
     return this.productsRepository.find();
   }
 
-  /**
-   * Busca un producto por ID. 
-   * Lanza NotFoundException si no existe para centralizar el error.
-   */
   async findOne(id: number): Promise<Product> {
     const product = await this.productsRepository.findOneBy({ id });
     if (!product) {
@@ -31,33 +24,25 @@ export class ProductsService {
     return product;
   }
 
-  /**
-   * Crea un nuevo producto basado en el DTO.
-   */
   async create(createProductDto: CreateProductDto): Promise<Product> {
     const newProduct = this.productsRepository.create(createProductDto);
     return this.productsRepository.save(newProduct);
   }
 
-  /**
-   * Actualiza un producto existente.
-   * Usamos el spread operator para evitar problemas de solo lectura en el DTO.
-   */
   async update(id: number, updateProductDto: UpdateProductDto): Promise<Product> {
     const productToUpdate = await this.findOne(id);
 
-    // Clonamos el DTO para asegurar que TypeORM trabaje con un objeto plano
-    const dataToUpdate = { ...updateProductDto };
+    // --- NUEVA VALIDACIÓN DE STOCK ---
+    if (updateProductDto.stock !== undefined && updateProductDto.stock < 0) {
+      throw new BadRequestException('El stock no puede ser un número negativo.');
+    }
 
-    // Merge actualiza el objeto productToUpdate con los nuevos datos
+    const dataToUpdate = { ...updateProductDto };
     const mergedProduct = this.productsRepository.merge(productToUpdate, dataToUpdate);
 
     return this.productsRepository.save(mergedProduct);
   }
 
-  /**
-   * Elimina un producto por completo.
-   */
   async remove(id: number): Promise<void> {
     const productToRemove = await this.findOne(id);
     await this.productsRepository.remove(productToRemove);
