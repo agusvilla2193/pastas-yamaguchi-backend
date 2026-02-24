@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { OrdersService } from '../orders/orders.service';
+import { OrderStatus } from '../orders/entities/order.entity'; // Importación vital
 
 export interface PaymentItem {
     productId: string;
@@ -96,7 +97,8 @@ export class PaymentsService {
             this.logger.log(`[Webhook] Pago MP #${paymentId} - Status: ${status} - Orden: ${orderId}`);
 
             if (status === 'approved') {
-                await this.ordersService.updateOrderStatus(Number(orderId), 'PAID');
+                // AQUÍ EL FIX: Usamos el Enum en lugar del string
+                await this.ordersService.updateOrderStatus(Number(orderId), OrderStatus.PAID);
                 this.logger.log(`✅ Orden ${orderId} actualizada a PAID satisfactoriamente.`);
             }
 

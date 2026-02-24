@@ -3,25 +3,12 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
-import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { User } from '../users/entities/user.entity';
 import { MailService } from './mail.service';
-import * as crypto from 'crypto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-
-export interface AuthResponse {
-    access_token: string;
-    user: {
-        id: number;
-        email: string;
-        firstName: string;
-        lastName: string;
-        role: string;
-        phone?: string;
-        address?: string;
-    };
-}
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -31,64 +18,34 @@ export class AuthService {
         private mailService: MailService,
     ) { }
 
-    async register(userObject: CreateUserDto): Promise<AuthResponse> {
-        // 1. Verificamos si el usuario ya existe antes de crearlo
-        const userExists = await this.usersService.findOneByEmail(userObject.email);
-        if (userExists) {
-            throw new ConflictException('El correo electrónico ya está registrado.');
-        }
+    async register(createUserDto: CreateUserDto) {
+        const userExists = await this.usersService.findOneByEmail(createUserDto.email);
+        if (userExists) throw new ConflictException('El correo ya está registrado.');
 
-        // 2. Creamos el usuario en la base de datos
-        const newUser = await this.usersService.create(userObject);
+        const newUser = await this.usersService.create(createUserDto);
 
-        // 3. DISPARAR MAIL DE CONFIRMACIÓN (sin await para no bloquear)
         this.mailService.sendConfirmationEmail(
-            newUser.email,
-            newUser.firstName,
-            newUser.confirmationToken
-        ).catch(err => console.error('Error enviando mail de bienvenida:', err));
+            newUser.email, newUser.firstName, newUser.confirmationToken
+        ).catch(err => console.error('Error mail bienvenida:', err));
 
-        // 4. Genero el token de acceso para el login automático inicial
-        const payload = { email: newUser.email, sub: newUser.id, role: newUser.role };
-
-        return {
-            access_token: this.jwtService.sign(payload),
-            user: {
-                id: newUser.id,
-                email: newUser.email,
-                firstName: newUser.firstName,
-                lastName: newUser.lastName,
-                role: newUser.role,
-                phone: newUser.phone,
-                address: newUser.address
-            }
-        };
+        return this.generateAuthResponse(newUser);
     }
 
-    async validateUser(email: string, pass: string): Promise<Omit<User, 'password'> | null> {
-        const user = await this.usersService.findOneByEmail(email);
-
-        if (user && (await bcrypt.compare(pass, user.password))) {
-            // VERIFICACIÓN DE SEGURIDAD:
-            if (!user.isActive) {
-                throw new BadRequestException('Debes confirmar tu email antes de iniciar sesión.');
-            }
-
-            const { password, ...result } = user;
-            return result;
-        }
-        return null;
-    }
-
-    async login(loginDto: LoginDto): Promise<AuthResponse> {
-        const user = await this.validateUser(loginDto.email, loginDto.password);
-
-        if (!user) {
+    async login(loginDto: LoginDto) {
+        const user = await this.usersService.findOneByEmail(loginDto.email);
+        if (!user || !(await bcrypt.compare(loginDto.password, user.password))) {
             throw new UnauthorizedException('Credenciales incorrectas');
         }
 
-        const payload = { email: user.email, sub: user.id, role: user.role };
+        if (!user.isActive) {
+            throw new BadRequestException('Debes confirmar tu email.');
+        }
 
+        return this.generateAuthResponse(user);
+    }
+
+    private generateAuthResponse(user: User) {
+        const payload = { email: user.email, sub: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -102,7 +59,6 @@ export class AuthService {
             }
         };
     }
-
     async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
         const user = await this.usersService.findOneByEmail(forgotPasswordDto.email);
 
