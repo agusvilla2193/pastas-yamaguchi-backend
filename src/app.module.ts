@@ -12,12 +12,16 @@ import { CartModule } from './cart/cart.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      // Si estamos en test, cargamos .test.env, si no development o prod
-      envFilePath: process.env.NODE_ENV === 'test' ? '.test.env' : (process.env.NODE_ENV ? undefined : '.development.env'),
+      // Priorizamos .env, luego .development.env, y .test.env si estamos en jest
+      envFilePath: [
+        `.env.${process.env.NODE_ENV}`,
+        '.development.env',
+        '.env',
+      ],
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
@@ -26,10 +30,9 @@ import { CartModule } from './cart/cart.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: false, // Esto creará las tablas
-        dropSchema: false, // Lo mantenemos en false para evitar conflictos de borrado/creación
+        synchronize: false, // Siempre false en desarrollo avanzado/producción
+        logging: process.env.NODE_ENV === 'development',
       }),
-      inject: [ConfigService],
     }),
     ProductsModule,
     UsersModule,

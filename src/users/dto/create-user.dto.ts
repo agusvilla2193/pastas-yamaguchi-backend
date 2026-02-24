@@ -1,36 +1,36 @@
 import { IsString, IsEmail, IsNotEmpty, MinLength, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
-    @IsNotEmpty()
     @IsEmail({}, { message: 'El formato del email es incorrecto.' })
+    @IsNotEmpty()
     readonly email: string;
 
-    @IsNotEmpty()
     @IsString()
+    @IsNotEmpty()
     @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres.' })
     readonly password: string;
 
-    @IsNotEmpty()
     @IsString()
+    @IsNotEmpty()
     readonly firstName: string;
 
-    @IsNotEmpty()
     @IsString()
+    @IsNotEmpty()
     readonly lastName: string;
 
-    @IsNotEmpty({ message: 'El teléfono es necesario para la entrega.' })
     @IsString()
+    @IsNotEmpty({ message: 'El teléfono es necesario para la entrega.' })
     readonly phone: string;
 
-    @IsNotEmpty({ message: 'La dirección es obligatoria.' })
     @IsString()
+    @IsNotEmpty({ message: 'La dirección es obligatoria.' })
     readonly address: string;
 
-    @IsNotEmpty({ message: 'La localidad es obligatoria.' })
     @IsString()
+    @IsNotEmpty({ message: 'La localidad es obligatoria.' })
     readonly city: string;
 
-    @IsOptional()
     @IsString()
-    readonly zipCode: string;
+    @IsOptional()
+    readonly zipCode?: string;
 }
