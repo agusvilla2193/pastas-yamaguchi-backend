@@ -1,6 +1,10 @@
 # 🍜 Dojo Yamaguchi - API (NestJS)
 
-Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarrollada con NestJS para gestionar la producción y venta de pastas artesanales.
+![Coverage](https://img.shields.io/badge/coverage-15%25-yellow)
+![NestJS](https://img.shields.io/badge/nestjs-%23E0234E.svg?style=flat&logo=nestjs&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat&logo=postgresql&logoColor=white)
+
+Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarrollada con NestJS para gestionar la producción y venta de pastas artesanales, diseñada con un enfoque en seguridad y escalabilidad.
 
 ## 🛠️ Tecnologías Principales
 - **Framework:** [NestJS](https://nestjs.com/)
@@ -11,15 +15,24 @@ Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarro
 - **Pagos:** Mercado Pago SDK
 - **Imágenes:** Cloudinary
 
-## 📋 Características
-- 🛡️ **Autenticación Segura:** Sistema de login y registro con cookies protegidas.
-- 🛒 **Gestión de Órdenes:** Lógica de stock atómica mediante transacciones de base de datos.
-- 💳 **Pagos Integrados:** Flujo completo de Checkout Pro y Webhooks de Mercado Pago.
-- 📧 **Notificaciones:** Envío de correos para confirmación de cuenta y recuperación de contraseña.
+## 📋 Características y Avances
+
+### 🛡️ Seguridad y Robustez
+- **Global Exception Filter:** Sistema centralizado para capturar y formatear errores, evitando filtraciones de datos técnicos del servidor.
+- **Data Sanitization:** Los datos sensibles (como passwords y salts) están protegidos y nunca se exponen en las respuestas de la API.
+- **Validación Estricta:** Uso de `ValidationPipe` global con `whitelist` para asegurar que solo ingresen los datos permitidos.
+
+### 🛒 Core de Negocio
+- **Gestión de Órdenes:** Lógica de stock atómica mediante transacciones de base de datos para evitar inconsistencias.
+- **Flujo de Productos:** CRUD completo con validaciones de integridad de stock.
+- **Pagos Integrados:** Flujo completo de Checkout Pro y Webhooks de Mercado Pago.
+- **Notificaciones:** Envío de correos para confirmación de cuenta y recuperación de contraseña (Nodemailer).
+
+
 
 ## 🚀 Instalación y Desarrollo
 
-1. Instalar dependencias:
+1. **Instalar dependencias:**
    ```bash
    npm install
 
@@ -45,3 +58,9 @@ Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarro
 4. Compilar para producción:
      ```bash
    npm run build
+
+5. Ejecutar Pruebas y Coverage:
+     ```bash
+   npm run test:cov
+
+Desarrollado con ❤️ para Pastas Yamaguchi.

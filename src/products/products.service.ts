@@ -32,14 +32,12 @@ export class ProductsService {
   async update(id: number, updateProductDto: UpdateProductDto): Promise<Product> {
     const productToUpdate = await this.findOne(id);
 
-    // --- NUEVA VALIDACIÓN DE STOCK ---
     if (updateProductDto.stock !== undefined && updateProductDto.stock < 0) {
       throw new BadRequestException('El stock no puede ser un número negativo.');
     }
 
-    const dataToUpdate = { ...updateProductDto };
-    const mergedProduct = this.productsRepository.merge(productToUpdate, dataToUpdate);
-
+    // Merge actualiza el objeto encontrado con los nuevos datos del DTO
+    const mergedProduct = this.productsRepository.merge(productToUpdate, updateProductDto);
     return this.productsRepository.save(mergedProduct);
   }
 

@@ -23,21 +23,18 @@ export class UsersService {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
-
-    // Generamos un token aleatorio para la confirmación de email
     const confirmationToken = crypto.randomBytes(32).toString('hex');
 
     const newUser = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
       confirmationToken,
-      isActive: false, // El usuario empieza inactivo hasta confirmar mail
+      isActive: false,
     });
 
     return this.usersRepository.save(newUser);
   }
 
-  // Método nuevo para activar al usuario cuando haga clic en el mail
   async confirmEmail(token: string): Promise<boolean> {
     const user = await this.usersRepository.findOneBy({ confirmationToken: token });
 
@@ -46,7 +43,7 @@ export class UsersService {
     }
 
     user.isActive = true;
-    user.confirmationToken = null; // Limpiamos el token una vez usado
+    user.confirmationToken = null;
     await this.usersRepository.save(user);
     return true;
   }
@@ -56,13 +53,18 @@ export class UsersService {
   }
 
   async findOne(id: number): Promise<User> {
-    const user = await this.usersRepository.findOneBy({ id });
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      select: ['id', 'email', 'firstName', 'lastName', 'role', 'isActive'] // Protegemos el password
+    });
     if (!user) throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
     return user;
   }
 
   async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
+    return this.usersRepository.find({
+      select: ['id', 'email', 'firstName', 'lastName', 'role', 'isActive'] // Protegemos el password
+    });
   }
 
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {

@@ -2,7 +2,6 @@ import {
   Controller, Get, Post, Param, UseGuards,
   HttpCode, HttpStatus, Patch, Body, ParseIntPipe, BadRequestException
 } from '@nestjs/common';
-// Importamos OrderStatus desde el servicio
 import { OrdersService, OrderStatus } from './orders.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
@@ -15,7 +14,6 @@ import { Order } from './entities/order.entity';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) { }
 
-  // 1. Solo ADMIN puede ver TODAS las órdenes del sistema
   @Get('all')
   @UseGuards(RolesGuard)
   @Roles('admin')
@@ -23,20 +21,17 @@ export class OrdersController {
     return this.ordersService.findAllOrders();
   }
 
-  // 2. Crear orden a partir del carrito del usuario logueado
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@GetUser('id') userId: number): Promise<Order> {
     return this.ordersService.createOrder(userId);
   }
 
-  // 3. El usuario ve sus propias órdenes
   @Get()
   async findAll(@GetUser('id') userId: number): Promise<Order[]> {
     return this.ordersService.findAllUserOrders(userId);
   }
 
-  // 4. Ver detalle de una orden específica (validando que sea del usuario)
   @Get(':id')
   async findOne(
     @Param('id', ParseIntPipe) id: number,
@@ -45,22 +40,20 @@ export class OrdersController {
     return this.ordersService.findOneOrder(id, userId);
   }
 
-  // 5. Actualizar estado (Ruta de ADMIN)
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles('admin')
+  @HttpCode(HttpStatus.OK)
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: string // Recibimos string desde el Body
+    @Body('status') status: string
   ): Promise<Order> {
-    // Definimos los estados válidos para validar el string entrante
     const validStatuses: OrderStatus[] = ['PENDING', 'PAID', 'SHIPPED', 'CANCELLED'];
 
     if (!validStatuses.includes(status as OrderStatus)) {
       throw new BadRequestException(`Estado no válido. Los estados permitidos son: ${validStatuses.join(', ')}`);
     }
 
-    // Usamos Type Casting (as OrderStatus) para que TS acepte el envío al servicio
     return this.ordersService.updateOrderStatus(id, status as OrderStatus);
   }
 }
