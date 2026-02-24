@@ -12,8 +12,8 @@ import { CartModule } from './cart/cart.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      // Si existe NODE_ENV (producción), ignora el archivo local; si no, usa .development.env
-      envFilePath: process.env.NODE_ENV ? undefined : '.development.env',
+      // Si estamos en test, cargamos .test.env, si no development o prod
+      envFilePath: process.env.NODE_ENV === 'test' ? '.test.env' : (process.env.NODE_ENV ? undefined : '.development.env'),
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
@@ -26,8 +26,8 @@ import { CartModule } from './cart/cart.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        // Sincronización automática solo en desarrollo
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        synchronize: false, // Esto creará las tablas
+        dropSchema: false, // Lo mantenemos en false para evitar conflictos de borrado/creación
       }),
       inject: [ConfigService],
     }),
