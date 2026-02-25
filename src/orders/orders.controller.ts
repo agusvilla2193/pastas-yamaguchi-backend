@@ -1,12 +1,10 @@
-import { Controller, Get, Post, Param, UseGuards, Patch, Body, ParseIntPipe, ParseEnumPipe } from '@nestjs/common';
+import { Controller, Get, Post, Param, Patch, Body, ParseIntPipe, ParseEnumPipe } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { OrderStatus } from './entities/order.entity';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Auth } from '../auth/decorators/auth.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 
-@UseGuards(JwtAuthGuard)
+@Auth() // Protege todo el controlador con JWT por defecto
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) { }
@@ -22,15 +20,13 @@ export class OrdersController {
   }
 
   @Get('all')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Auth('admin') // Sobrescribe para pedir rol admin
   findAllAdmin() {
     return this.ordersService.findAllOrders();
   }
 
   @Patch(':id/status')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Auth('admin')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status', new ParseEnumPipe(OrderStatus)) status: OrderStatus,

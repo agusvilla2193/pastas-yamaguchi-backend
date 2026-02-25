@@ -1,9 +1,24 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import {
+    ExceptionFilter,
+    Catch,
+    ArgumentsHost,
+    HttpException,
+    HttpStatus,
+    Logger,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
+
+interface NestErrorResponse {
+    message: string | string[];
+    error: string;
+    statusCode: number;
+}
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-    catch(exception: unknown, host: ArgumentsHost) {
+    private readonly logger = new Logger('ExceptionFilter');
+
+    catch(exception: unknown, host: ArgumentsHost): void {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
         const request = ctx.getRequest<Request>();
@@ -13,17 +28,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
                 ? exception.getStatus()
                 : HttpStatus.INTERNAL_SERVER_ERROR;
 
-        const message =
+        const exceptionResponse =
             exception instanceof HttpException
-                ? exception.getResponse()
+                ? (exception.getResponse() as string | NestErrorResponse)
                 : 'Internal server error';
 
-        // Aquí evitamos los "leaks": si es un error 500, no enviamos el detalle técnico a GitHub/Producción
+        const message =
+            typeof exceptionResponse === 'object'
+                ? exceptionResponse.message
+                : exceptionResponse;
+
+        this.logger.error(
+            `[${request.method}] ${request.url} - Status: ${status} - Message: ${JSON.stringify(message)}`,
+        );
+
         response.status(status).json({
             statusCode: status,
             timestamp: new Date().toISOString(),
             path: request.url,
-            error: typeof message === 'string' ? message : (message as any).message || message,
+            message: Array.isArray(message) ? message[0] : message, // Tomamos el primer error si es array
         });
     }
 }
