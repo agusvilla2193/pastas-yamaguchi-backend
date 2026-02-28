@@ -1,66 +1,64 @@
-# 🍜 Dojo Yamaguchi - API (NestJS)
+# 🍜 Pastas Yamaguchi - API Enterprise (NestJS)
 
-![Coverage](https://img.shields.io/badge/coverage-15%25-yellow)
 ![NestJS](https://img.shields.io/badge/nestjs-%23E0234E.svg?style=flat&logo=nestjs&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)
+![Swagger](https://img.shields.io/badge/-Swagger-%23C1E81C?style=flat&logo=swagger&logoColor=black)
 
-Este es el núcleo de la aplicación **Dojo Yamaguchi**. Una API robusta desarrollada con NestJS para gestionar la producción y venta de pastas artesanales, diseñada con un enfoque en seguridad y escalabilidad.
+Este es el núcleo de la aplicación **Pastas Yamaguchi**. Una API profesional desarrollada con NestJS para gestionar la producción y venta de pastas artesanales, diseñada con arquitectura modular, contenedores y documentación interactiva.
 
-## 🛠️ Tecnologías Principales
-- **Framework:** [NestJS](https://nestjs.com/)
-- **Lenguaje:** TypeScript (Strict Mode)
-- **Base de Datos:** PostgreSQL
-- **ORM:** TypeORM
-- **Autenticación:** JWT + HTTP-Only Cookies
-- **Pagos:** Mercado Pago SDK
-- **Imágenes:** Cloudinary
+## 📖 Documentación Interactiva (Swagger)
+Una vez que el servidor esté corriendo, puedes explorar y testear todos los endpoints desde la interfaz de Swagger:
 
-## 📋 Características y Avances
+🔗 **[http://localhost:3000/api/docs](http://localhost:3000/api/docs)**
 
-### 🛡️ Seguridad y Robustez
-- **Global Exception Filter:** Sistema centralizado para capturar y formatear errores, evitando filtraciones de datos técnicos del servidor.
-- **Data Sanitization:** Los datos sensibles (como passwords y salts) están protegidos y nunca se exponen en las respuestas de la API.
-- **Validación Estricta:** Uso de `ValidationPipe` global con `whitelist` para asegurar que solo ingresen los datos permitidos.
+---
 
-### 🛒 Core de Negocio
-- **Gestión de Órdenes:** Lógica de stock atómica mediante transacciones de base de datos para evitar inconsistencias.
-- **Flujo de Productos:** CRUD completo con validaciones de integridad de stock.
-- **Pagos Integrados:** Flujo completo de Checkout Pro y Webhooks de Mercado Pago.
-- **Notificaciones:** Envío de correos para confirmación de cuenta y recuperación de contraseña (Nodemailer).
+## 🛠️ Tecnologías Core
+- **Framework:** [NestJS](https://nestjs.com/) con arquitectura modular.
+- **Base de Datos:** PostgreSQL orquestada en contenedores.
+- **Infraestructura:** Docker & Docker Compose (Multi-stage builds).
+- **ORM:** TypeORM con soporte para transacciones atómicas.
+- **Pagos:** Mercado Pago SDK (Checkout Pro & Webhooks).
+- **Seguridad:** JWT + HTTP-Only Cookies & Bcrypt.
 
+## 🚀 Instalación Rápida con Docker (Recomendado)
 
+No necesitas instalar Node.js ni PostgreSQL en tu máquina local.
 
-## 🚀 Instalación y Desarrollo
+1. **Configurar el entorno:**
+   Crea un archivo `.development.env` en la raíz (usa `.env.example` como guía).
 
-1. **Instalar dependencias:**
+2. **Levantar el sistema:**
    ```bash
-   npm install
+   docker-compose up --build
 
-2. Configurar variables de entorno (.env):
-   Crea un archivo .development.env en la raíz con las siguientes claves:
+El backend estará listo en http://localhost:3000 y la DB persistirá sus datos en un volumen.
 
-   DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+📋 Características y Avances
+🛡️ Seguridad y Robustez
+Global Exception Filter: Captura de errores centralizada para evitar fugas de información sensible.
 
-   JWT_SECRET
+Arquitectura Dockerizada: Imagen de producción optimizada (Alpine Linux) para máxima seguridad y ligereza.
 
-   FRONTEND_URL (Ej: http://localhost:3001)
+Validación Estricta: Uso de ValidationPipe con whitelist para asegurar la integridad de los DTOs.
 
-   BACKEND_URL (Ej: http://localhost:3000)
+🛒 Core de Negocio
+Gestión de Stock: Lógica atómica para evitar inconsistencias durante compras simultáneas.
 
-   MP_ACCESS_TOKEN
+Integración con Mercado Pago: Flujo completo de pagos y recepción de notificaciones IPN/Webhooks.
 
-   CLOUDINARY_URL, MAIL_USER, MAIL_PASS
+Imágenes: Gestión de archivos mediante Cloudinary.
 
-3. Correr en modo desarrollo:
-   ```bash
-   npm run start:dev
+Mailing: Notificaciones automatizadas con Nodemailer para recuperación de cuentas.
 
-4. Compilar para producción:
-     ```bash
-   npm run build
+🧪 Desarrollo Local (Manual)
+Si prefieres correrlo fuera de Docker:
 
-5. Ejecutar Pruebas y Coverage:
-     ```bash
-   npm run test:cov
+Instalar dependencias: npm install
+
+Modo desarrollo: npm run start:dev
+
+Tests & Coverage: npm run test:cov
 
 Desarrollado con ❤️ para Pastas Yamaguchi.

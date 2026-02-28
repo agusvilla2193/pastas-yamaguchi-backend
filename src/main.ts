@@ -2,30 +2,41 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger, INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'; // 1. Importamos Swagger
 import * as cookieParser from 'cookie-parser';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 /**
  * Configuración compartida entre el bootstrap y los tests E2E.
- * Aquí definimos pipes, filtros, middlewares y CORS.
  */
 export function setupApp(app: INestApplication): void {
-  // 1. Cookies: Necesario para leer el JWT desde las cookies seguras
+  // 1. Cookies
   app.use(cookieParser());
 
-  // 2. Filtro Global de Excepciones: Captura errores y evita leaks de info interna
+  // 2. Filtro Global de Excepciones
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // 3. Pipes Globales: Validación automática de DTOs y transformación de tipos
+  // 3. Pipes Globales
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,            // Elimina campos que no estén en el DTO
-      forbidNonWhitelisted: true, // Lanza error si hay campos no permitidos
-      transform: true,            // Convierte tipos automáticamente (ej: string a number)
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
-  // 4. CORS: Configuración de seguridad para el acceso desde el Frontend
+  // 4. Swagger: Configuración de la documentación interactiva
+  const config = new DocumentBuilder()
+    .setTitle('Pastas Yamaguchi API')
+    .setDescription('Documentación oficial del ecosistema de Pastas Yamaguchi. Incluye gestión de productos, órdenes, carrito y pagos.')
+    .setVersion('1.0')
+    .addBearerAuth() // Habilita el candadito para JWT
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document); // Acceso en /api/docs
+
+  // 5. CORS
   const configService = app.get(ConfigService);
   const frontendUrl = configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
 
@@ -40,7 +51,6 @@ async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
-  // Aplicamos la configuración compartida
   setupApp(app);
 
   const configService = app.get(ConfigService);
@@ -48,6 +58,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port);
   logger.log(`🚀 Dojo Backend corriendo en puerto: ${port}`);
+  logger.log(`📖 Documentación Swagger disponible en: http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();
