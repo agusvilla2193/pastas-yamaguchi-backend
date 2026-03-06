@@ -23,14 +23,14 @@ import { CartModule } from './cart/cart.module';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
+        type: 'postgres' as const,
         host: configService.get<string>('DB_HOST'),
         port: configService.get<number>('DB_PORT', 5432),
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: false, // Siempre false en desarrollo avanzado/producción
+        synchronize: true, // Siempre false en desarrollo avanzado/producción
         logging: process.env.NODE_ENV === 'development',
       }),
     }),
