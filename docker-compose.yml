@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT}:5434" # En tu .env es 5434
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -23,10 +23,24 @@ services:
     env_file:
       - .env
     environment:
-      - DB_HOST=db # Importante: aquí 'db' es el nombre del servicio de arriba
+      - DB_HOST=db
       - DB_PORT=5432
     depends_on:
       - db
+
+  # AGREGAMOS EL FRONTEND ACA
+  frontend:
+    build:
+      context: ../frontend # Le decimos que busque la carpeta 'frontend' que está afuera
+      dockerfile: Dockerfile
+    container_name: dojo-frontend
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
