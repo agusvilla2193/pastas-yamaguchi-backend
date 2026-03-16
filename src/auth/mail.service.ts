@@ -9,12 +9,15 @@ export class MailService {
     constructor(private configService: ConfigService) {
         this.transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
-            port: 465,
-            secure: true, // true para puerto 465
+            port: 587,
+            secure: false, // false para puerto 587
             auth: {
                 user: this.configService.get<string>('MAIL_USER'), // Tu email
                 pass: this.configService.get<string>('MAIL_PASS'), // Contraseña de 16 dígitos
             },
+            tls: {
+                rejectUnauthorized: false,
+            }
         });
     }
 
