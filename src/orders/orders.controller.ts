@@ -1,27 +1,32 @@
 import { Controller, Get, Post, Param, Patch, Body, ParseIntPipe, ParseEnumPipe } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { OrderStatus } from './entities/order.entity';
+import { Order, OrderStatus } from './entities/order.entity';
 import { Auth } from '../auth/decorators/auth.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 
-@Auth() // Protege todo el controlador con JWT por defecto
+interface CreateOrderResponse {
+  order: Order;
+  init_point: string;
+}
+
+@Auth()
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) { }
 
   @Post()
-  create(@GetUser('id') userId: number) {
+  create(@GetUser('id') userId: number): Promise<CreateOrderResponse> {
     return this.ordersService.createOrder(userId);
   }
 
   @Get()
-  findAll(@GetUser('id') userId: number) {
+  findAll(@GetUser('id') userId: number): Promise<Order[]> {
     return this.ordersService.findAllUserOrders(userId);
   }
 
   @Get('all')
-  @Auth('admin') // Sobrescribe para pedir rol admin
-  findAllAdmin() {
+  @Auth('admin')
+  findAllAdmin(): Promise<Order[]> {
     return this.ordersService.findAllOrders();
   }
 
@@ -30,7 +35,7 @@ export class OrdersController {
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status', new ParseEnumPipe(OrderStatus)) status: OrderStatus,
-  ) {
+  ): Promise<Order> {
     return this.ordersService.updateOrderStatus(id, status);
   }
 }

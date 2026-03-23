@@ -6,17 +6,31 @@ import { OrderItem } from './order-item.entity';
 import { CartService } from '../cart/cart.service';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
+import { ConfigService } from '@nestjs/config';
+import { Preference, MercadoPagoConfig } from 'mercadopago';
+
+interface CreateOrderResponse {
+  order: Order;
+  init_point: string;
+}
 
 @Injectable()
 export class OrdersService {
+  private readonly mpClient: MercadoPagoConfig;
+
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     private readonly cartService: CartService,
     private readonly dataSource: DataSource,
-  ) { }
+    private readonly configService: ConfigService,
+  ) {
+    this.mpClient = new MercadoPagoConfig({
+      accessToken: this.configService.get<string>('MP_ACCESS_TOKEN') || '',
+    });
+  }
 
-  async createOrder(userId: number): Promise<Order> {
+  async createOrder(userId: number): Promise<CreateOrderResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -30,7 +44,6 @@ export class OrdersService {
       const user = await queryRunner.manager.findOneBy(User, { id: userId });
       if (!user) throw new NotFoundException('El usuario no existe.');
 
-      // Creamos la instancia de la orden
       const order = queryRunner.manager.create(Order, {
         user,
         status: OrderStatus.PENDING,
@@ -40,6 +53,7 @@ export class OrdersService {
 
       let total = 0;
       const orderItems: OrderItem[] = [];
+      const itemsForMP = [];
 
       for (const cartItem of cart.items) {
         const product = await queryRunner.manager.findOneBy(Product, { id: cartItem.product.id });
@@ -48,7 +62,6 @@ export class OrdersService {
           throw new BadRequestException(`Stock insuficiente para: ${product?.name || 'Producto'}`);
         }
 
-        // Descuento de stock atómico
         product.stock -= cartItem.quantity;
         await queryRunner.manager.save(product);
 
@@ -61,20 +74,47 @@ export class OrdersService {
 
         orderItems.push(orderItem);
         total += product.price * cartItem.quantity;
+
+        itemsForMP.push({
+          id: product.id.toString(),
+          title: product.name,
+          unit_price: Number(product.price),
+          quantity: cartItem.quantity,
+          currency_id: 'ARS',
+        });
       }
 
-      // Actualizamos la orden con el total final
       savedOrder.total = total;
       await queryRunner.manager.save(savedOrder);
       await queryRunner.manager.save(orderItems);
 
+      const preference = new Preference(this.mpClient);
+      const mpResponse = await preference.create({
+        body: {
+          items: itemsForMP,
+          back_urls: {
+            success: `${this.configService.get<string>('FRONTEND_URL')}/`,
+            failure: `${this.configService.get<string>('FRONTEND_URL')}/cart`,
+            pending: `${this.configService.get<string>('FRONTEND_URL')}/orders`,
+          },
+          auto_return: 'approved',
+          external_reference: savedOrder.id.toString(),
+        },
+      });
+
       await this.cartService.clearCart(userId);
       await queryRunner.commitTransaction();
 
-      return this.findOneOrder(savedOrder.id, userId);
+      const finalOrder = await this.findOneOrder(savedOrder.id, userId);
+
+      return {
+        order: finalOrder,
+        init_point: mpResponse.init_point || '',
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       if (error instanceof BadRequestException || error instanceof NotFoundException) throw error;
+      console.error('MP Error:', error);
       throw new InternalServerErrorException('Error crítico al procesar la orden.');
     } finally {
       await queryRunner.release();
