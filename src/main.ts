@@ -44,6 +44,7 @@ export function setupApp(app: INestApplication): void {
     origin: [frontendUrl, 'http://localhost:3001'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'], // <--- AGREGAR ESTO
   });
 }
 
