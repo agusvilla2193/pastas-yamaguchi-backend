@@ -11,17 +11,13 @@ import {
     HttpCode,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, AuthData } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
-/**
- * Define la estructura exacta del usuario que se devuelve al cliente.
- * Evita exponer campos sensibles o innecesarios.
- */
 interface UserResponse {
     id: number;
     email: string;
@@ -32,23 +28,18 @@ interface UserResponse {
     address?: string;
 }
 
-/**
- * Respuesta estándar para los métodos de autenticación exitosos.
- */
 interface AuthSuccessResponse {
     user: UserResponse;
 }
 
-/**
- * Interfaz extendida para la Request de Express.
- * Tipa el objeto 'user' que inyecta el Passport JwtStrategy.
- */
+interface JwtUserPayload {
+    id: number;
+    email: string;
+    role: string;
+}
+
 export interface AuthenticatedRequest extends Request {
-    user: {
-        userId: number;
-        email: string;
-        role: string;
-    };
+    user: JwtUserPayload;
 }
 
 @Controller('auth')
@@ -65,7 +56,8 @@ export class AuthController {
         @Body() loginDto: LoginDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<AuthSuccessResponse> {
-        const data = await this.authService.login(loginDto);
+        // Ahora data es de tipo AuthData, que TIENE access_token y user
+        const data: AuthData = await this.authService.login(loginDto);
         this.setAuthCookie(res, data.access_token);
         return { user: data.user };
     }
@@ -76,7 +68,7 @@ export class AuthController {
         @Body() dto: CreateUserDto,
         @Res({ passthrough: true }) res: Response,
     ): Promise<AuthSuccessResponse> {
-        const data = await this.authService.register(dto);
+        const data: AuthData = await this.authService.register(dto);
         this.setAuthCookie(res, data.access_token);
         return { user: data.user };
     }
@@ -84,7 +76,13 @@ export class AuthController {
     @Post('logout')
     @HttpCode(HttpStatus.OK)
     logout(@Res({ passthrough: true }) res: Response): { message: string } {
-        res.clearCookie('access_token');
+        const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: true,
+            sameSite: isProduction ? 'none' : 'lax',
+            path: '/'
+        });
         return { message: 'Sesión cerrada exitosamente' };
     }
 
@@ -98,21 +96,19 @@ export class AuthController {
 
     @Get('me')
     @UseGuards(JwtAuthGuard)
-    getProfile(@Req() req: AuthenticatedRequest): AuthenticatedRequest['user'] {
+    getProfile(@Req() req: AuthenticatedRequest): JwtUserPayload {
         return req.user;
     }
 
-    /**
-     * Centraliza la lógica de configuración de cookies.
-     */
     private setAuthCookie(res: Response, token: string): void {
         const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
 
         res.cookie('access_token', token, {
             httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? 'strict' : 'lax',
-            maxAge: 1000 * 60 * 60 * 24, // 1 día
+            secure: true,
+            sameSite: isProduction ? 'none' : 'lax',
+            maxAge: 1000 * 60 * 60 * 24,
+            path: '/',
         });
     }
 }

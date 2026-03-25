@@ -5,6 +5,14 @@ import { ConfigService } from '@nestjs/config';
 import { UserSession } from '../interfaces/user-payload.interface';
 import { Request } from 'express';
 
+interface JwtPayload {
+    sub: number;
+    email: string;
+    role: string;
+    iat?: number;
+    exp?: number;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(
@@ -13,7 +21,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         const secret = configService.get<string>('JWT_SECRET');
 
         super({
-            // Modificamos la extracción para que busque en las cookies
             jwtFromRequest: (req: Request) => {
                 let token = null;
                 if (req && req.cookies) {
@@ -22,14 +29,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 return token;
             },
             ignoreExpiration: false,
-            secretOrKey: secret,
+            secretOrKey: secret || 'secret_key_fallback',
         });
     }
 
-    /**
-     * Este método se ejecuta tras validar la firma del token.
-     */
-    async validate(payload: any): Promise<UserSession> {
+    async validate(payload: JwtPayload): Promise<UserSession> {
         return {
             id: payload.sub,
             email: payload.email,

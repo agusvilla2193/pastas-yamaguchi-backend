@@ -7,6 +7,7 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 interface CreateOrderResponse {
   order: Order;
   init_point: string;
+  preferenceId: string;
 }
 
 @Auth()

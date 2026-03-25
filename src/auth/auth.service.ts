@@ -10,6 +10,20 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import * as crypto from 'crypto';
 
+// Definimos una interfaz para el retorno del servicio y evitar el 'any'
+export interface AuthData {
+    access_token: string;
+    user: {
+        id: number;
+        email: string;
+        firstName: string;
+        lastName: string;
+        role: string;
+        phone?: string;
+        address?: string;
+    };
+}
+
 @Injectable()
 export class AuthService {
     constructor(
@@ -18,7 +32,7 @@ export class AuthService {
         private mailService: MailService,
     ) { }
 
-    async register(createUserDto: CreateUserDto) {
+    async register(createUserDto: CreateUserDto): Promise<AuthData> {
         const userExists = await this.usersService.findOneByEmail(createUserDto.email);
         if (userExists) throw new ConflictException('El correo ya está registrado.');
 
@@ -28,10 +42,11 @@ export class AuthService {
             newUser.email, newUser.firstName, newUser.confirmationToken
         ).catch(err => console.error('Error mail bienvenida:', err));
 
+        // Para evitar errores en el controlador, devolvemos la estructura completa
         return this.generateAuthResponse(newUser);
     }
 
-    async login(loginDto: LoginDto) {
+    async login(loginDto: LoginDto): Promise<AuthData> {
         const user = await this.usersService.findOneByEmail(loginDto.email);
         if (!user || !(await bcrypt.compare(loginDto.password, user.password))) {
             throw new UnauthorizedException('Credenciales incorrectas');
@@ -44,7 +59,7 @@ export class AuthService {
         return this.generateAuthResponse(user);
     }
 
-    private generateAuthResponse(user: User) {
+    private generateAuthResponse(user: User): AuthData {
         const payload = { email: user.email, sub: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
@@ -54,8 +69,8 @@ export class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
-                phone: user.phone,
-                address: user.address
+                phone: user.phone || '',
+                address: user.address || ''
             }
         };
     }
