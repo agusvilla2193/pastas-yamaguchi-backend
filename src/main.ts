@@ -38,10 +38,10 @@ export function setupApp(app: INestApplication): void {
 
   // 5. CORS
   const configService = app.get(ConfigService);
-  const frontendUrl = configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+  const frontendUrl = configService.get<string>('FRONTEND_URL') || 'https://pastas-yamaguchi.vercel.app';
 
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:3001'],
+    origin: [frontendUrl, 'https://pastas-yamaguchi.vercel.app'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'], // <--- AGREGAR ESTO
